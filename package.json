@@ -1,0 +1,31 @@
+{
+  "name": "uniflow-kvm-pro",
+  "version": "3.0.0",
+  "description": "Ultimate KVM Switch (Mouse, Keyboard, Clipboard & File Bridge) for Windows and Mac",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "build:mac": "electron-builder --mac"
+  },
+  "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.0",
+    "uiohook-napi": "^1.5.4",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.uniflow.kvmpro",
+    "productName": "UniFlow KVM Pro",
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities"
+    }
+  }
+}
