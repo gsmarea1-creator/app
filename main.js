@@ -1,11 +1,11 @@
 const { app, BrowserWindow, ipcMain, screen, clipboard } = require('electron');
 const WebSocket = require('ws');
-const { mouse, keyboard, Point, Button, Key } = require('@nut-tree-fork/nut-js');const { uIOhook, UiohookKey } = require('uiohook-napi');
+const { mouse, keyboard, Point, Button, Key } = require('@nut-tree-fork/nut-js');
+const { uIOhook, UiohookKey } = require('uiohook-napi');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-// استجابة فورية بدون أي تأخير (0ms Latency)
 mouse.config.autoDelayMs = 0;
 keyboard.config.autoDelayMs = 0;
 
@@ -22,7 +22,6 @@ let lastClipboardText = '';
 let macScreen = { width: 1440, height: 900 };
 let macCursor = { x: 720, y: 450 };
 
-// جدول تحويل الأزرار (مع ربط Ctrl بـ Command في الماك لسهولة الاختصارات)
 const KEY_MAP = {
   [UiohookKey.A]: Key.A, [UiohookKey.B]: Key.B, [UiohookKey.C]: Key.C,
   [UiohookKey.D]: Key.D, [UiohookKey.E]: Key.E, [UiohookKey.F]: Key.F,
@@ -41,7 +40,6 @@ const KEY_MAP = {
   [UiohookKey.Backspace]: Key.Backspace, [UiohookKey.Tab]: Key.Tab,
   [UiohookKey.Escape]: Key.Escape,
   [UiohookKey.Shift]: Key.LeftShift, [UiohookKey.ShiftRight]: Key.RightShift,
-  // تحويل Ctrl في الويندوز لـ Command (LeftSuper) في الماك باش يخدم Copy/Paste طبيعي
   [UiohookKey.Ctrl]: Key.LeftSuper, [UiohookKey.CtrlRight]: Key.RightSuper,
   [UiohookKey.Alt]: Key.LeftAlt, [UiohookKey.AltRight]: Key.RightAlt,
   [UiohookKey.Meta]: Key.LeftControl, [UiohookKey.MetaRight]: Key.RightControl,
@@ -85,7 +83,6 @@ function createWindow() {
 
 app.whenReady().then(createWindow);
 
-// حساب حدود شاشات الويندوز (كيتعامل مع 2 شاشات أو أكثر)
 function getWindowsBounds() {
   const displays = screen.getAllDisplays();
   let minX = 0, maxX = 0, minY = 0, maxY = 0;
@@ -98,9 +95,6 @@ function getWindowsBounds() {
   return { minX, maxX, minY, maxY };
 }
 
-// ==========================================
-// 1. مراقبة ومزامنة الحافظة (Clipboard Sync)
-// ==========================================
 function startClipboardSync() {
   if (clipboardWatcher) clearInterval(clipboardWatcher);
   lastClipboardText = clipboard.readText();
@@ -110,18 +104,12 @@ function startClipboardSync() {
     const currentText = clipboard.readText();
     if (currentText && currentText !== lastClipboardText) {
       lastClipboardText = currentText;
-      activeSocket.send(JSON.stringify({
-        type: 'clipboard-sync',
-        text: currentText
-      }));
+      activeSocket.send(JSON.stringify({ type: 'clipboard-sync', text: currentText }));
       mainWindow.webContents.send('log', '📋 Clipboard synced to remote device.');
     }
   }, 600);
 }
 
-// ==========================================
-// 2. التقاط الكليكات، السكرول والكيبورد (Global Hooks)
-// ==========================================
 function setupGlobalHooks() {
   if (hooksInitialized) return;
   hooksInitialized = true;
@@ -144,7 +132,6 @@ function setupGlobalHooks() {
   });
 
   uIOhook.on('keydown', (e) => {
-    // زر الأمان F12: كيرجع الماوس للويندوز فوراً
     if (e.keycode === UiohookKey.F12 && isRemoteActive) {
       isRemoteActive = false;
       mainWindow.webContents.send('active-screen', 'Windows');
@@ -170,12 +157,9 @@ function setupGlobalHooks() {
   uIOhook.start();
 }
 
-// ==========================================
-// 3. كود السيرفر (Windows Host)
-// ==========================================
 ipcMain.on('start-server', (event, port) => {
   if (wss) wss.close();
-  wss = new WebSocket.Server({ port: Number(port), maxPayload: 500 * 1024 * 1024 }); // يدعم ملفات حتى 500MB
+  wss = new WebSocket.Server({ port: Number(port), maxPayload: 500 * 1024 * 1024 });
 
   setupGlobalHooks();
   startClipboardSync();
@@ -222,7 +206,6 @@ function startMouseTracking() {
     const anchorY = Math.floor((bounds.minY + bounds.maxY) / 2);
 
     if (!isRemoteActive) {
-      // الانتقال للماك عند ملامسة أقصى اليسار ديال الشاشة الوسطى
       if (pos.x <= bounds.minX + 2) {
         isRemoteActive = true;
         macCursor.x = macScreen.width - 12;
@@ -245,7 +228,6 @@ function startMouseTracking() {
         if (macCursor.y < 0) macCursor.y = 0;
         if (macCursor.y > macScreen.height) macCursor.y = macScreen.height;
 
-        // الرجوع لشاشة الويندوز الوسطى عند ملامسة يمين شاشة الماك
         if (macCursor.x >= macScreen.width) {
           isRemoteActive = false;
           const winY = Math.floor((macCursor.y / macScreen.height) * (bounds.maxY - bounds.minY)) + bounds.minY;
@@ -257,12 +239,9 @@ function startMouseTracking() {
         }
       }
     }
-  }, 8); // ~120Hz Polling
+  }, 8);
 }
 
-// ==========================================
-// 4. كود الكلاينت (Mac Receiver)
-// ==========================================
 ipcMain.on('start-client', (event, { ip, port }) => {
   if (wsClient) wsClient.close();
   wsClient = new WebSocket(`ws://${ip}:${port}`, { maxPayload: 500 * 1024 * 1024 });
@@ -329,9 +308,6 @@ function getNutButton(btnName) {
   return Button.LEFT;
 }
 
-// ==========================================
-// 5. إرسال واستقبال الملفات (Drag & Drop)
-// ==========================================
 ipcMain.on('send-file', (event, filePath) => {
   if (!activeSocket || activeSocket.readyState !== WebSocket.OPEN) {
     mainWindow.webContents.send('log', '⚠️ Error: Connect both devices before dropping files.');
@@ -340,11 +316,7 @@ ipcMain.on('send-file', (event, filePath) => {
   const fileName = path.basename(filePath);
   fs.readFile(filePath, (err, data) => {
     if (err) return mainWindow.webContents.send('log', `❌ File Error: ${err.message}`);
-    activeSocket.send(JSON.stringify({
-      type: 'file-drop',
-      name: fileName,
-      content: data.toString('base64')
-    }));
+    activeSocket.send(JSON.stringify({ type: 'file-drop', name: fileName, content: data.toString('base64') }));
     mainWindow.webContents.send('log', `📤 File sent: ${fileName}`);
   });
 });
