@@ -1,28 +1,12 @@
-name: Build Windows KVM
-
-on: [push]
-
-jobs:
-  build:
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Build Windows Executable
-        run: npm run build:win
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-setup
-          path: dist/*.exe
+"build": {
+    "appId": "com.uniflow.kvmpro",
+    "productName": "UniFlow KVM Pro",
+    "publish": null,
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities"
+    }
+  }
