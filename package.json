@@ -20,6 +20,7 @@
   "build": {
     "appId": "com.uniflow.kvmpro",
     "productName": "UniFlow KVM Pro",
+    "publish": "never",
     "win": {
       "target": "nsis"
     },
